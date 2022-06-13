@@ -8,6 +8,7 @@
 
 #ifndef __USB_DESCRIPTOR_H__
 #define __USB_DESCRIPTOR_H__
+#include <zephyr/usb/usb_device.h>
 
 /*
  * The USB Unicode bString is encoded in UTF16LE, which means it takes up

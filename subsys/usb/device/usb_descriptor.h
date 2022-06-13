@@ -43,6 +43,16 @@ struct usb_dev_data {
 	sys_snode_t node;
 };
 
+/* Structure representing the global USB description */
+struct usb_common_descriptor {
+	struct usb_device_descriptor device_descriptor;
+	struct usb_cfg_descriptor cfg_descr;
+} __packed;
+
+#define USB_DESC_MANUFACTURER_IDX			1
+#define USB_DESC_PRODUCT_IDX				2
+#define USB_DESC_SERIAL_NUMBER_IDX			3
+
 struct usb_dev_data *usb_get_dev_data_by_cfg(sys_slist_t *list,
 					     struct usb_cfg_data *cfg);
 struct usb_dev_data *usb_get_dev_data_by_iface(sys_slist_t *list,

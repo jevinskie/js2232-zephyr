@@ -37,21 +37,12 @@ LOG_MODULE_REGISTER(usb_descriptor);
 extern struct usb_desc_header __usb_descriptor_start[];
 extern struct usb_desc_header __usb_descriptor_end[];
 
-/* Structure representing the global USB description */
-struct common_descriptor {
-	struct usb_device_descriptor device_descriptor;
-	struct usb_cfg_descriptor cfg_descr;
-} __packed;
-
-#define USB_DESC_MANUFACTURER_IDX			1
-#define USB_DESC_PRODUCT_IDX				2
-#define USB_DESC_SERIAL_NUMBER_IDX			3
-
 /*
  * Device and configuration descriptor placed in the device section,
  * no additional descriptor may be placed there.
  */
-USBD_DEVICE_DESCR_DEFINE(primary) struct common_descriptor common_desc = {
+#ifndef CONFIG_USB_DEVICE_CUSTOM_DESCRIPTOR
+USBD_DEVICE_DESCR_DEFINE(primary) struct usb_common_descriptor common_desc = {
 	/* Device descriptor */
 	.device_descriptor = {
 		.bLength = sizeof(struct usb_device_descriptor),
@@ -96,6 +87,7 @@ USBD_DEVICE_DESCR_DEFINE(primary) struct common_descriptor common_desc = {
 		.bMaxPower = CONFIG_USB_MAX_POWER,
 	},
 };
+#endif
 
 struct usb_string_desription {
 	struct usb_string_descriptor lang_descr;

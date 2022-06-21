@@ -359,7 +359,7 @@
 	DT_PINCTRL_NAME_TO_IDX(DT_DRV_INST(inst), name)
 
 /**
- * @brief Convert a pinctrl index to its name as an uppercased token
+ * @brief Convert a pinctrl index to its name as a token
  *
  * This is equivalent to
  * DT_PINCTRL_IDX_TO_NAME_TOKEN(DT_DRV_INST(inst), pc_idx).

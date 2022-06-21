@@ -14,6 +14,8 @@
  * STM32Cube HAL layer.
  */
 
+#define PINCTRL_STATE_GPIO_SE0 PINCTRL_STATE_PRIV_START
+
 #include <soc.h>
 #include <stm32_ll_bus.h>
 #include <stm32_ll_pwr.h>
@@ -64,6 +66,9 @@ LOG_MODULE_REGISTER(usb_dc_stm32);
 PINCTRL_DT_INST_DEFINE(0);
 static const struct pinctrl_dev_config *usb_pcfg =
 					PINCTRL_DT_INST_DEV_CONFIG_GET(0);
+
+#define USB_GPIO_SE0 DT_PINCTRL_HAS_NAME(DT_DRV_INST(0), gpio_se0)
+
 
 #define USB_OTG_HS_EMB_PHY (DT_HAS_COMPAT_STATUS_OKAY(st_stm32_usbphyc) && \
 			    DT_HAS_COMPAT_STATUS_OKAY(st_stm32_otghs))
@@ -412,10 +417,20 @@ static int usb_dc_stm32_init(void)
 	}
 #endif
 
+#if USB_GPIO_SE0
+	LOG_DBG("Pinctrl signals configuration se0");
+	status = pinctrl_apply_state(usb_pcfg, PINCTRL_STATE_GPIO_SE0);
+	if (status < 0) {
+		LOG_ERR("USB pinctrl %ssetup failed (%d)", "se0 ", status);
+		return status;
+	}
+	k_msleep(10);
+#endif
+
 	LOG_DBG("Pinctrl signals configuration");
 	status = pinctrl_apply_state(usb_pcfg, PINCTRL_STATE_DEFAULT);
 	if (status < 0) {
-		LOG_ERR("USB pinctrl setup failed (%d)", status);
+		LOG_ERR("USB pinctrl %ssetup failed (%d)", "", status);
 		return status;
 	}
 

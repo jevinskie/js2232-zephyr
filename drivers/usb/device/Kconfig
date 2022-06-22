@@ -50,6 +50,13 @@ config USB_DC_STM32
 	  Enable USB support on the STM32 F0, F1, F2, F3, F4, F7, L0, L4, G4, U5 family of
 	  processors.
 
+config USB_DC_STM32_DBL_BUF
+	bool "Enable double-buffered mode for unidirectional endpoints on STM32 USB-FS"
+	depends on USB_DC_STM32
+	help
+	  Enable double-buffered mode on STM32 devices with USB-FS. Does not apply to
+	  USB_OTG-FS devices.
+
 config USB_DC_SAM0
 	bool "SAM0 series USB Device Controller driver"
 	default y

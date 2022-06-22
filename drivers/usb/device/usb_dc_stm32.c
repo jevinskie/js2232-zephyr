@@ -134,13 +134,6 @@ static const struct pinctrl_dev_config *usb_pcfg =
 #define EP0_IN (EP0_IDX | USB_EP_DIR_IN)
 #define EP0_OUT (EP0_IDX | USB_EP_DIR_OUT)
 
-enum usb_dc_stm32_ep_transfer_type {
-	USB_DC_EP_DBL_BUF = 0x80
-};
-
-#define EP_TY(ep_type) ((ep_type) & ~(USB_DC_EP_DBL_BUF))
-#define IS_DBL(ep_type) ((ep_type) & USB_DC_EP_DBL_BUF)
-
 /* Endpoint state */
 struct usb_dc_stm32_ep_state {
 	uint16_t ep_mps;		/** Endpoint max packet size */
@@ -635,9 +628,9 @@ int usb_dc_ep_check_cap(const struct usb_dc_ep_cfg_data * const cfg)
 	uint8_t ep_idx = USB_EP_GET_IDX(cfg->ep_addr);
 
 	LOG_DBG("ep %x, mps %d, type %d", cfg->ep_addr, cfg->ep_mps,
-		EP_TY(cfg->ep_type));
+		USB_DC_EP_TYPE(cfg->ep_type));
 
-	if ((EP_TY(cfg->ep_type) == USB_DC_EP_CONTROL) && ep_idx) {
+	if ((USB_DC_EP_TYPE(cfg->ep_type) == USB_DC_EP_CONTROL) && ep_idx) {
 		LOG_ERR("invalid endpoint configuration");
 		return -1;
 	}
@@ -654,7 +647,7 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 {
 	uint8_t ep = ep_cfg->ep_addr;
 	struct usb_dc_stm32_ep_state *ep_state = usb_dc_stm32_get_ep_state(ep);
-	const bool dbl = IS_DBL(ep_cfg->ep_type);
+	const bool dbl = USB_DC_EP_TYPE_IS_UNIDIRECTIONAL(ep_cfg->ep_type);
 
 	if (!ep_state) {
 		return -EINVAL;
@@ -662,7 +655,7 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 
 	LOG_DBG("ep 0x%02x, previous ep_mps %u, ep_mps %u, ep_type %u",
 		ep_cfg->ep_addr, ep_state->ep_mps, ep_cfg->ep_mps,
-		EP_TY(ep_cfg->ep_type));
+		USB_DC_EP_TYPE(ep_cfg->ep_type));
 
 #if defined(USB) || defined(USB_DRD_FS)
 	if (ep_cfg->ep_mps > ep_state->ep_pma_buf_len) {
@@ -683,7 +676,7 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 #endif
 	ep_state->ep_mps = ep_cfg->ep_mps;
 
-	switch (EP_TY(ep_cfg->ep_type)) {
+	switch (USB_DC_EP_TYPE(ep_cfg->ep_type)) {
 	case USB_DC_EP_CONTROL:
 		ep_state->ep_type = EP_TYPE_CTRL;
 		break;
@@ -777,10 +770,10 @@ int usb_dc_ep_enable(const uint8_t ep)
 	}
 
 	LOG_DBG("HAL_PCD_EP_Open(0x%02x, %u, %u)", ep, ep_state->ep_mps,
-		EP_TY(ep_state->ep_type));
+		USB_DC_EP_TYPE(ep_state->ep_type));
 
 	status = HAL_PCD_EP_Open(&usb_dc_stm32_state.pcd, ep,
-				 ep_state->ep_mps, EP_TY(ep_state->ep_type));
+				 ep_state->ep_mps, USB_DC_EP_TYPE(ep_state->ep_type));
 	if (status != HAL_OK) {
 		LOG_ERR("HAL_PCD_EP_Open failed(0x%02x), %d", ep,
 			(int)status);

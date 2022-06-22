@@ -220,7 +220,7 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 				    struct usb_cfg_data *const cfg_data,
 				    uint32_t *requested_ep, uint16_t unidir_ep)
 {
-	LOG_INF("requested_ep start: 0x%08x", *requested_ep, unidir_ep);
+	LOG_INF("requested_ep start: 0x%08x", *requested_ep);
 	for (unsigned int i = 0; i < cfg_data->num_endpoints; i++) {
 		struct usb_ep_cfg_data *ep_data = cfg_data->endpoint;
 
@@ -233,9 +233,12 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 
 		for (uint8_t idx = 1; idx < 16U; idx++) {
 			struct usb_dc_ep_cfg_data ep_cfg;
-
+			const bool unidir = unidir_ep & (1 << idx);
 			ep_cfg.ep_type = (ep_descr->bmAttributes &
 					  USB_EP_TRANSFER_TYPE_MASK);
+			if (unidir) {
+				ep_cfg.ep_type |= USB_DC_EP_UNIDIRECTIONAL;
+			}
 			ep_cfg.ep_mps = ep_descr->wMaxPacketSize;
 			ep_cfg.ep_addr = ep_descr->bEndpointAddress;
 			if (ep_cfg.ep_addr & USB_EP_DIR_IN) {

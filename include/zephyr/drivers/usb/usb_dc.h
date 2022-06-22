@@ -112,8 +112,13 @@ enum usb_dc_ep_transfer_type {
 	/** Bulk type endpoint */
 	USB_DC_EP_BULK,
 	/** Interrupt type endpoint  */
-	USB_DC_EP_INTERRUPT
+	USB_DC_EP_INTERRUPT,
+	/** Unidirectional flag */
+	USB_DC_EP_UNIDIRECTIONAL = 0x80,
 };
+
+#define USB_DC_EP_TYPE(ep_type) ((ep_type) & ~(USB_DC_EP_UNIDIRECTIONAL))
+#define USB_DC_EP_TYPE_IS_UNIDIRECTIONAL(ep_type) ((ep_type) & USB_DC_EP_UNIDIRECTIONAL)
 
 /**
  * @brief USB Endpoint Synchronization Type

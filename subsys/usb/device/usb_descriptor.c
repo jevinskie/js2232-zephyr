@@ -216,10 +216,11 @@ int usb_get_str_descriptor_idx(void *ptr)
  * usb_ep_cfg_data, so both variables bEndpointAddress and ep_addr need
  * to be updated.
  */
-static int usb_validate_ep_cfg_data(struct usb_ep_descriptor * const ep_descr,
-				    struct usb_cfg_data * const cfg_data,
-				    uint32_t *requested_ep)
+static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
+				    struct usb_cfg_data *const cfg_data,
+				    uint32_t *requested_ep, uint16_t unidir_ep)
 {
+	LOG_INF("requested_ep start: 0x%08x", *requested_ep, unidir_ep);
 	for (unsigned int i = 0; i < cfg_data->num_endpoints; i++) {
 		struct usb_ep_cfg_data *ep_data = cfg_data->endpoint;
 
@@ -251,7 +252,7 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor * const ep_descr,
 				ep_cfg.ep_addr = idx;
 			}
 			if (!usb_dc_ep_check_cap(&ep_cfg)) {
-				LOG_DBG("Fixing EP address %x -> %x",
+				LOG_INF("Fixing EP address %x -> %x",
 					ep_descr->bEndpointAddress,
 					ep_cfg.ep_addr);
 				ep_descr->bEndpointAddress = ep_cfg.ep_addr;
@@ -261,11 +262,14 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor * const ep_descr,
 				} else {
 					*requested_ep |= (1U << idx);
 				}
-				LOG_DBG("endpoint 0x%x", ep_data[i].ep_addr);
+				LOG_INF("endpoint 0x%x", ep_data[i].ep_addr);
+				LOG_INF("requested_ep end: 0x%08x",
+					*requested_ep);
 				return 0;
 			}
 		}
 	}
+	LOG_INF("requested_ep error: 0x%08x", *requested_ep);
 	return -1;
 }
 
@@ -367,6 +371,31 @@ static int usb_fix_descriptor(struct usb_desc_header *head)
 	uint8_t numof_ifaces = 0U;
 	uint8_t str_descr_idx = 0U;
 	uint32_t requested_ep = BIT(16) | BIT(0);
+	uint16_t unidir_ep, out_ep, in_ep = 0;
+	const struct usb_desc_header *orig_head = head;
+
+	while (head->bLength != 0U) {
+		switch (head->bDescriptorType) {
+		case USB_DESC_ENDPOINT:
+			ep_descr = (struct usb_ep_descriptor *)head;
+			const uint8_t idx =
+				USB_EP_GET_IDX(ep_descr->bEndpointAddress);
+			if (USB_EP_DIR_IS_OUT(ep_descr->bEndpointAddress)) {
+				out_ep |= (1 << idx);
+			} else {
+				in_ep |= (1 << idx);
+			}
+			break;
+		default:
+			break;
+		}
+		/* Move to next descriptor */
+		head = (struct usb_desc_header *)((uint8_t *)head +
+						  head->bLength);
+	}
+	unidir_ep = out_ep ^ in_ep;
+	LOG_INF("unidir_ep: 0x%04x", unidir_ep);
+	head = orig_head;
 
 	while (head->bLength != 0U) {
 		switch (head->bDescriptorType) {
@@ -379,9 +408,9 @@ static int usb_fix_descriptor(struct usb_desc_header *head)
 			break;
 		case USB_DESC_INTERFACE:
 			if_descr = (struct usb_if_descriptor *)head;
-			LOG_DBG("Interface descriptor %p", head);
+			LOG_INF("Interface descriptor %p", head);
 			if (if_descr->bAlternateSetting) {
-				LOG_DBG("Skip alternate interface");
+				LOG_INF("Skip alternate interface");
 				break;
 			}
 
@@ -408,11 +437,11 @@ static int usb_fix_descriptor(struct usb_desc_header *head)
 				return -1;
 			}
 
-			LOG_DBG("Endpoint descriptor %p", head);
+			LOG_INF("Endpoint descriptor %p", head);
 			ep_descr = (struct usb_ep_descriptor *)head;
-			if (usb_validate_ep_cfg_data(ep_descr,
-						     cfg_data,
-						     &requested_ep)) {
+			if (usb_validate_ep_cfg_data(ep_descr, cfg_data,
+						     &requested_ep,
+						     unidir_ep)) {
 				LOG_ERR("Failed to validate endpoints");
 				return -1;
 			}
@@ -459,7 +488,7 @@ static int usb_fix_descriptor(struct usb_desc_header *head)
 	}
 
 	if ((head + 1) != __usb_descriptor_end) {
-		LOG_DBG("try to fix next descriptor at %p", head + 1);
+		LOG_INF("try to fix next descriptor at %p", head + 1);
 		return usb_fix_descriptor(head + 1);
 	}
 

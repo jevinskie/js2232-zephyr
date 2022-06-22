@@ -15,6 +15,7 @@
  */
 
 #define PINCTRL_STATE_GPIO_SE0 PINCTRL_STATE_PRIV_START
+#define USB		       1
 
 #include <soc.h>
 #include <stm32_ll_bus.h>
@@ -669,8 +670,13 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 		    (usb_dc_stm32_state.pma_offset + ep_cfg->ep_mps)) {
 			return -EINVAL;
 		}
-		HAL_PCDEx_PMAConfig(&usb_dc_stm32_state.pcd, ep, dbl ? PCD_DBL_BUF : PCD_SNG_BUF,
-				    usb_dc_stm32_state.pma_offset);
+		uint32_t pma_off = usb_dc_stm32_state.pma_offset;
+		if (dbl) {
+			usb_dc_stm32_state.pma_offset += ep_cfg->ep_mps;
+			pma_off |= usb_dc_stm32_state.pma_offset << 16;
+		}
+		HAL_PCDEx_PMAConfig(&usb_dc_stm32_state.pcd, ep,
+				    dbl ? PCD_DBL_BUF : PCD_SNG_BUF, pma_off);
 		ep_state->ep_pma_buf_len = ep_cfg->ep_mps;
 		usb_dc_stm32_state.pma_offset += ep_cfg->ep_mps;
 	}

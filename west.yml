@@ -31,9 +31,6 @@ manifest:
     - name: chre
       revision: 0edfe2c2ec656afb910cfab8ed59a5ffd59b87c8
       path: modules/lib/chre
-    - name: civetweb
-      revision: 094aeb41bb93e9199d24d665ee43e9e05d6d7b1c
-      path: modules/lib/civetweb
     - name: cmsis
       revision: 5f86244bad4ad5a590e084f0e72ba7a1416c2edf
       path: modules/hal/cmsis
@@ -65,13 +62,13 @@ manifest:
       groups:
         - hal
     - name: hal_espressif
-      revision: df85671c5d0405c0747c2939c8dfe808b7e4cf38
+      revision: db4a5893e45db100497fbe5262847280fb749dac
       path: modules/hal/espressif
       west-commands: west/west-commands.yml
       groups:
         - hal
     - name: hal_gigadevice
-      revision: 63a72ca90b7e0d7257211ddc5c79e8c0b940371b
+      revision: cc8bc14c612e5ecfcb0435f6da53f3302e25014a
       path: modules/hal/gigadevice
       groups:
         - hal
@@ -86,7 +83,7 @@ manifest:
       groups:
         - hal
     - name: hal_nordic
-      revision: a85bb3676d61d1ae202088e0d3fec556056b2c9e
+      revision: d9e50d7287fc381792f6f2ee6d37093e036fbd10
       path: modules/hal/nordic
       groups:
         - hal
@@ -199,6 +196,9 @@ manifest:
     - name: openthread
       revision: e2a765599aa0379d0f72f0149a9cbafec070c12d
       path: modules/lib/openthread
+    - name: picolibc
+      path: modules/lib/picolibc
+      revision: 4f8076520240192be284843a114c92853e29bbbc
     - name: segger
       revision: 3a52ab222133193802d3c3b4d21730b9b1f1d2f6
       path: modules/debug/segger

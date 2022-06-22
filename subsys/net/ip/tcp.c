@@ -1201,8 +1201,6 @@ static void tcp_resend_data(struct k_work *work)
 	conn->data_mode = TCP_DATA_MODE_RESEND;
 	conn->unacked_len = 0;
 
-	(void)k_sem_take(&conn->tx_sem, K_NO_WAIT);
-
 	ret = tcp_send_data(conn);
 	conn->send_data_retries++;
 	if (ret == 0) {
@@ -1226,10 +1224,6 @@ static void tcp_resend_data(struct k_work *work)
 		}
 	} else if (ret == -ENODATA) {
 		conn->data_mode = TCP_DATA_MODE_SEND;
-
-		if (!tcp_window_full(conn)) {
-			k_sem_give(&conn->tx_sem);
-		}
 
 		goto out;
 	} else if (ret == -ENOBUFS) {
@@ -2369,11 +2363,6 @@ int net_tcp_queue_data(struct net_context *context, struct net_pkt *pkt)
 		(void)k_work_schedule_for_queue(&tcp_work_q,
 						&conn->send_data_timer,
 						K_NO_WAIT);
-		ret = -EAGAIN;
-		goto out;
-	}
-
-	if (conn->data_mode == TCP_DATA_MODE_RESEND) {
 		ret = -EAGAIN;
 		goto out;
 	}

@@ -25,6 +25,14 @@
 extern "C" {
 #endif
 
+/*
+ * Zephyr currently assumes the size of a couple standard types to simplify
+ * print string formats. Let's make sure this doesn't change without notice.
+ */
+BUILD_ASSERT(sizeof(int32_t) == sizeof(int));
+BUILD_ASSERT(sizeof(int64_t) == sizeof(long long));
+BUILD_ASSERT(sizeof(intptr_t) == sizeof(long));
+
 /**
  * @brief Kernel APIs
  * @defgroup kernel_apis Kernel APIs
@@ -4132,6 +4140,21 @@ extern void k_work_user_queue_start(struct k_work_user_q *work_q,
 				    k_thread_stack_t *stack,
 				    size_t stack_size, int prio,
 				    const char *name);
+
+/**
+ * @brief Access the user mode thread that animates a work queue.
+ *
+ * This is necessary to grant a user mode work queue thread access to things
+ * the work items it will process are expected to use.
+ *
+ * @param work_q pointer to the user mode queue structure.
+ *
+ * @return the user mode thread associated with the work queue.
+ */
+static inline k_tid_t k_work_user_queue_thread_get(struct k_work_user_q *work_q)
+{
+	return &work_q->thread;
+}
 
 /** @} */
 

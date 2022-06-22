@@ -168,6 +168,7 @@ Bluetooth:
     maintainers:
         - jhedberg
     collaborators:
+        - hermabe
         - jori-nordic
         - alwa-nordic
         - Vudentz
@@ -1069,6 +1070,8 @@ Formatted Output:
     status: maintained
     maintainers:
       - nordic-krch
+    collaborators:
+      - dcpleung
     files:
       - include/zephyr/sys/cbprintf*
       - tests/unit/cbprintf/
@@ -1155,6 +1158,21 @@ Base OS:
     labels:
         - "area: Base OS"
 
+Laird Connectivity platforms:
+    status: maintained
+    maintainers:
+        - rerickson1
+    collaborators:
+        - greg-leach
+    files:
+        - boards/arm/bl5340_dvk/
+        - boards/arm/bl65*/
+        - boards/arm/bt510/
+        - boards/arm/bt610/
+        - boards/arm/pinnacle_100_dvk/
+    labels:
+        - "platform: Laird Connectivity"
+
 Little FS:
     status: odd fixes
     files:
@@ -1173,6 +1191,7 @@ Logging:
     collaborators:
         - chen-png
         - aasthagr
+        - dcpleung
     files:
         - include/zephyr/logging/
         - samples/subsys/logging/
@@ -1642,7 +1661,6 @@ Intel Platforms (Xtensa):
     files:
         - boards/xtensa/intel_*/
         - soc/xtensa/intel_*/
-        - samples/boards/intel_s1000_crb/
     labels:
         - "platform: Intel CAVS"
 
@@ -1820,6 +1838,20 @@ TI Platforms:
     labels:
         - "platform: TI"
 
+Xilinx Platforms:
+  status: odd fixes
+  collaborators:
+    - henrikbrixandersen
+    - ibirnbaum
+  files:
+    - drivers/*/*xlnx*
+    - dts/*/xilinx/
+    - dts/bindings/*/*xlnx*
+    - include/zephyr/*/*/*xlnx*
+    - soc/arm/xilinx*/
+  labels:
+    - "platform: Xilinx"
+
 Storage:
     status: maintained
     maintainers:
@@ -1959,16 +1991,6 @@ West:
     labels:
         - manifest-canopennode
         - "area: CAN"
-
-"West project: civetweb":
-    status: obsolete
-    files:
-        - samples/net/civetweb/
-        - modules/Kconfig.civetweb
-    labels:
-        - manifest-civetweb
-        - "area: Networking"
-        - "area: civetweb"
 
 "West project: cmsis":
     status: maintained

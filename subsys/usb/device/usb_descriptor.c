@@ -41,7 +41,7 @@ extern struct usb_desc_header __usb_descriptor_end[];
  * Device and configuration descriptor placed in the device section,
  * no additional descriptor may be placed there.
  */
-#ifndef CONFIG_USB_DEVICE_CUSTOM_DESCRIPTOR
+#ifndef CONFIG_USB_DEVICE_CUSTOM_COMMON_DESCRIPTOR
 USBD_DEVICE_DESCR_DEFINE(primary) struct usb_common_descriptor common_desc = {
 	/* Device descriptor */
 	.device_descriptor = {
@@ -87,7 +87,7 @@ USBD_DEVICE_DESCR_DEFINE(primary) struct usb_common_descriptor common_desc = {
 		.bMaxPower = CONFIG_USB_MAX_POWER,
 	},
 };
-#endif
+#endif /* CONFIG_USB_DEVICE_CUSTOM_COMMON_DESCRIPTOR */
 
 struct usb_string_desription {
 	struct usb_string_descriptor lang_descr;
@@ -221,6 +221,7 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 				    uint32_t *requested_ep, uint16_t unidir_ep)
 {
 	LOG_INF("requested_ep start: 0x%08x", *requested_ep);
+#ifndef CONFIG_USB_DEVICE_CUSTOM_ENDPOINT_CONFIG
 	for (unsigned int i = 0; i < cfg_data->num_endpoints; i++) {
 		struct usb_ep_cfg_data *ep_data = cfg_data->endpoint;
 
@@ -230,6 +231,7 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 		if (ep_descr->bEndpointAddress != ep_data[i].ep_addr) {
 			continue;
 		}
+		LOG_INF("found ep_descr addr: 0x%02x i: %u", ep_descr->bEndpointAddress, i);
 
 		for (uint8_t idx = 1; idx < 16U; idx++) {
 			struct usb_dc_ep_cfg_data ep_cfg;
@@ -238,6 +240,7 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 					  USB_EP_TRANSFER_TYPE_MASK);
 			if (unidir) {
 				ep_cfg.ep_type |= USB_DC_EP_UNIDIRECTIONAL;
+				LOG_INF("UNIDIR set idx: %u ep_type: 0x%02x", idx, ep_cfg.ep_type);
 			}
 			ep_cfg.ep_mps = ep_descr->wMaxPacketSize;
 			ep_cfg.ep_addr = ep_descr->bEndpointAddress;
@@ -266,14 +269,68 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 					*requested_ep |= (1U << idx);
 				}
 				LOG_INF("endpoint 0x%x", ep_data[i].ep_addr);
-				LOG_INF("requested_ep end: 0x%08x",
-					*requested_ep);
+				LOG_INF("i: %u idx: %u requested_ep end: 0x%08x",
+					i, idx, *requested_ep);
 				return 0;
 			}
+			LOG_INF("cont i: %u idx: %u", i, idx);
 		}
 	}
 	LOG_INF("requested_ep error: 0x%08x", *requested_ep);
 	return -1;
+#else /* !defined(CONFIG_USB_DEVICE_CUSTOM_ENDPOINT_CONFIG) */
+	for (unsigned int i = 0; i < cfg_data->num_endpoints; i++) {
+		struct usb_ep_cfg_data *ep_data = cfg_data->endpoint;
+
+		/*
+		 * Trying to find the right entry in the usb_ep_cfg_data.
+		 */
+		if (ep_descr->bEndpointAddress != ep_data[i].ep_addr) {
+			continue;
+		}
+		LOG_INF("found ep_descr addr: 0x%02x i: %u", ep_descr->bEndpointAddress, i);
+
+		struct usb_dc_ep_cfg_data ep_cfg;
+		ep_cfg.ep_addr = ep_descr->bEndpointAddress;
+		uint8_t idx = USB_EP_GET_IDX(ep_cfg.ep_addr);
+		const bool unidir = unidir_ep & (1 << idx);
+		ep_cfg.ep_type = (ep_descr->bmAttributes & USB_EP_TRANSFER_TYPE_MASK);
+		if (unidir) {
+			ep_cfg.ep_type |= USB_DC_EP_UNIDIRECTIONAL;
+			LOG_INF("UNIDIR set idx: %u ep_type: 0x%02x", idx, ep_cfg.ep_type);
+		}
+		ep_cfg.ep_mps = ep_descr->wMaxPacketSize;
+		ep_cfg.ep_addr = ep_descr->bEndpointAddress;
+		if (ep_cfg.ep_addr & USB_EP_DIR_IN) {
+			if ((*requested_ep & (1U << (idx + 16U)))) {
+				LOG_ERR("EP 0x%02x already in use", ep_cfg.ep_addr);
+				return -1;
+			}
+		} else {
+			if ((*requested_ep & (1U << (idx)))) {
+				LOG_ERR("EP 0x%02x already in use", ep_cfg.ep_addr);
+				return -1;
+			}
+		}
+
+		if (!usb_dc_ep_check_cap(&ep_cfg)) {
+			LOG_INF("Fixing EP addr 0x%02x -> 0x%02x",
+				ep_data[i].ep_addr,
+				ep_cfg.ep_addr);
+			ep_data[i].ep_addr = ep_cfg.ep_addr;
+			if (ep_cfg.ep_addr & USB_EP_DIR_IN) {
+				*requested_ep |= (1U << (idx + 16U));
+			} else {
+				*requested_ep |= (1U << idx);
+			}
+			LOG_INF("endpoint 0x%x", ep_data[i].ep_addr);
+			LOG_INF("i: %u idx: %u requested_ep end: 0x%08x",
+				i, idx, *requested_ep);
+			return 0;
+		}
+	}
+	return -1;
+#endif /* !defined(CONFIG_USB_DEVICE_CUSTOM_ENDPOINT_CONFIG) */
 }
 
 /*
@@ -375,7 +432,7 @@ static int usb_fix_descriptor(struct usb_desc_header *head)
 	uint8_t str_descr_idx = 0U;
 	uint32_t requested_ep = BIT(16) | BIT(0);
 	uint16_t unidir_ep, out_ep, in_ep = 0;
-	const struct usb_desc_header *orig_head = head;
+	struct usb_desc_header * const orig_head = head;
 
 	while (head->bLength != 0U) {
 		switch (head->bDescriptorType) {

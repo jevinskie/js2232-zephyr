@@ -50,11 +50,17 @@ config USB_DEVICE_SN
 	  Serial Number String will be derived from
 	  Hardware Information Driver (HWINFO).
 
-config USB_DEVICE_CUSTOM_DESCRIPTOR
+config USB_DEVICE_CUSTOM_COMMON_DESCRIPTOR
 	bool "USB device uses custom device and config descriptor"
 	default n
 	help
 	  Enable overriding the device and configuration descriptor.
+
+config USB_DEVICE_CUSTOM_ENDPOINT_CONFIG
+	bool "USB device uses custom endpoints that aren't fixed up at runtime"
+	default n
+	help
+	  Enable overriding the default endpoint config fixup behavior.
 
 config USB_COMPOSITE_DEVICE
 	bool "Composite device driver"

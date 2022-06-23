@@ -627,8 +627,8 @@ int usb_dc_ep_check_cap(const struct usb_dc_ep_cfg_data * const cfg)
 {
 	uint8_t ep_idx = USB_EP_GET_IDX(cfg->ep_addr);
 
-	LOG_DBG("ep %x, mps %d, type %d", cfg->ep_addr, cfg->ep_mps,
-		USB_DC_EP_TYPE(cfg->ep_type));
+	// LOG_INF("ep %x, mps %d, type %d raw: 0x%02x", cfg->ep_addr, cfg->ep_mps,
+	// 	USB_DC_EP_TYPE(cfg->ep_type), cfg->ep_type);
 
 	if ((USB_DC_EP_TYPE(cfg->ep_type) == USB_DC_EP_CONTROL) && ep_idx) {
 		LOG_ERR("invalid endpoint configuration");
@@ -653,9 +653,9 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 		return -EINVAL;
 	}
 
-	LOG_DBG("ep 0x%02x, previous ep_mps %u, ep_mps %u, ep_type %u",
+	LOG_INF("ep 0x%02x, previous ep_mps %u, ep_mps %u, ep_type %u raw: 0x%02x",
 		ep_cfg->ep_addr, ep_state->ep_mps, ep_cfg->ep_mps,
-		USB_DC_EP_TYPE(ep_cfg->ep_type));
+		USB_DC_EP_TYPE(ep_cfg->ep_type), ep_cfg->ep_type);
 
 #if defined(USB) || defined(USB_DRD_FS)
 	if (ep_cfg->ep_mps > ep_state->ep_pma_buf_len) {

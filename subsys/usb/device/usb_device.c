@@ -527,7 +527,7 @@ static bool set_endpoint(const struct usb_ep_descriptor *ep_desc)
 	ep_cfg.ep_mps = sys_le16_to_cpu(ep_desc->wMaxPacketSize);
 	ep_cfg.ep_type = ep_desc->bmAttributes & USB_EP_TRANSFER_TYPE_MASK;
 
-	LOG_DBG("Set endpoint 0x%x type %u MPS %u",
+	LOG_INF("Set endpoint 0x%x type %u MPS %u",
 		ep_cfg.ep_addr, ep_cfg.ep_type, ep_cfg.ep_mps);
 
 	ret = usb_dc_ep_configure(&ep_cfg);
@@ -573,7 +573,7 @@ static bool reset_endpoint(const struct usb_ep_descriptor *ep_desc)
 	ep_cfg.ep_addr = ep_desc->bEndpointAddress;
 	ep_cfg.ep_type = ep_desc->bmAttributes & USB_EP_TRANSFER_TYPE_MASK;
 
-	LOG_DBG("Reset endpoint 0x%02x type %u",
+	LOG_INF("Reset endpoint 0x%02x type %u",
 		ep_cfg.ep_addr, ep_cfg.ep_type);
 
 	usb_cancel_transfer(ep_cfg.ep_addr);

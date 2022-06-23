@@ -139,6 +139,7 @@ struct usb_ep_cfg_data {
 	 *   OUT EP = 0x00 | \<endpoint number\>
 	 */
 	uint8_t ep_addr;
+	bool ep_unidir;
 };
 
 /**

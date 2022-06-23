@@ -263,6 +263,7 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 					ep_cfg.ep_addr);
 				ep_descr->bEndpointAddress = ep_cfg.ep_addr;
 				ep_data[i].ep_addr = ep_cfg.ep_addr;
+				ep_data[i].ep_unidir = unidir;
 				if (ep_cfg.ep_addr & USB_EP_DIR_IN) {
 					*requested_ep |= (1U << (idx + 16U));
 				} else {
@@ -318,6 +319,7 @@ static int usb_validate_ep_cfg_data(struct usb_ep_descriptor *const ep_descr,
 				ep_data[i].ep_addr,
 				ep_cfg.ep_addr);
 			ep_data[i].ep_addr = ep_cfg.ep_addr;
+			ep_data[i].ep_unidir = unidir;
 			if (ep_cfg.ep_addr & USB_EP_DIR_IN) {
 				*requested_ep |= (1U << (idx + 16U));
 			} else {
@@ -431,7 +433,7 @@ static int usb_fix_descriptor(struct usb_desc_header *head)
 	uint8_t numof_ifaces = 0U;
 	uint8_t str_descr_idx = 0U;
 	uint32_t requested_ep = BIT(16) | BIT(0);
-	uint16_t unidir_ep, out_ep, in_ep = 0;
+	uint16_t unidir_ep = 0, out_ep = 0, in_ep = 0;
 	struct usb_desc_header * const orig_head = head;
 
 	while (head->bLength != 0U) {

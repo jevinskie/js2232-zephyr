@@ -508,6 +508,28 @@ static bool usb_get_descriptor(struct usb_setup_packet *setup,
 	return found;
 }
 
+static bool is_ep_unidir(uint8_t ep)
+{
+	const struct usb_ep_cfg_data *ep_data;
+
+	/* Check if its Endpoint 0 */
+	if (USB_EP_GET_IDX(ep) == 0) {
+		return false;
+	}
+
+	STRUCT_SECTION_FOREACH(usb_cfg_data, cfg_data) {
+		ep_data = cfg_data->endpoint;
+
+		for (uint8_t n = 0; n < cfg_data->num_endpoints; n++) {
+			if (ep_data[n].ep_addr == ep) {
+				return ep_data[n].ep_unidir;
+			}
+		}
+	}
+
+	return false;
+}
+
 /*
  * @brief configure and enable endpoint
  *
@@ -526,6 +548,9 @@ static bool set_endpoint(const struct usb_ep_descriptor *ep_desc)
 	ep_cfg.ep_addr = ep_desc->bEndpointAddress;
 	ep_cfg.ep_mps = sys_le16_to_cpu(ep_desc->wMaxPacketSize);
 	ep_cfg.ep_type = ep_desc->bmAttributes & USB_EP_TRANSFER_TYPE_MASK;
+	if (is_ep_unidir(ep_cfg.ep_addr)) {
+		ep_cfg.ep_type |= USB_DC_EP_UNIDIRECTIONAL;
+	}
 
 	LOG_INF("Set endpoint 0x%x type %u MPS %u",
 		ep_cfg.ep_addr, ep_cfg.ep_type, ep_cfg.ep_mps);
@@ -572,6 +597,9 @@ static bool reset_endpoint(const struct usb_ep_descriptor *ep_desc)
 
 	ep_cfg.ep_addr = ep_desc->bEndpointAddress;
 	ep_cfg.ep_type = ep_desc->bmAttributes & USB_EP_TRANSFER_TYPE_MASK;
+	if (is_ep_unidir(ep_cfg.ep_addr)) {
+		ep_cfg.ep_type |= USB_DC_EP_UNIDIRECTIONAL;
+	}
 
 	LOG_INF("Reset endpoint 0x%02x type %u",
 		ep_cfg.ep_addr, ep_cfg.ep_type);

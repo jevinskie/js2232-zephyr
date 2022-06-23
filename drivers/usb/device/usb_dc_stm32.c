@@ -647,7 +647,10 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 {
 	uint8_t ep = ep_cfg->ep_addr;
 	struct usb_dc_stm32_ep_state *ep_state = usb_dc_stm32_get_ep_state(ep);
-	const bool dbl = USB_DC_EP_TYPE_IS_UNIDIRECTIONAL(ep_cfg->ep_type);
+	const bool dbl = USB_DC_EP_TYPE_IS_UNIDIRECTIONAL(ep_cfg->ep_type) && false;
+	if (dbl) {
+		LOG_INF("trying to double buffer 0x%02x", ep);
+	}
 
 	if (!ep_state) {
 		return -EINVAL;

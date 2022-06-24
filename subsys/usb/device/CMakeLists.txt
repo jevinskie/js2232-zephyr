@@ -6,11 +6,12 @@ if(CONFIG_USB_DEVICE_STACK)
   zephyr_sources(
     usb_device.c
     usb_descriptor.c
-    usb_transfer.c
     )
 
   add_subdirectory(class)
 endif()
+
+zephyr_sources_ifdef(CONFIG_USB_TRANSFER_API usb_transfer.c)
 
 zephyr_sources_ifdef(CONFIG_USB_DEVICE_BOS bos.c)
 

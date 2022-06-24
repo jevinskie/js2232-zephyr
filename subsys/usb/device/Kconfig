@@ -132,8 +132,15 @@ config USB_MAX_POWER
 	  Set bMaxPower value in the Standard Configuration Descriptor,
 	  the result is 2mA times the value provided.
 
+config USB_TRANSFER_API
+	bool "Enables the high-level transfer APIs"
+	default y
+	# FIXME: other stuff depends on this but I'm lazy
+	help
+	  Enables the high-level transfer APIs.
+
 config USB_WORKQUEUE
-	bool "Use a dedicate work queue in the USB subsystem"
+	bool "Use a dedicated work queue in the USB subsystem"
 	default y if USB_CDC_ACM
 	help
 	  This option provides a dedicated work queue that is used for

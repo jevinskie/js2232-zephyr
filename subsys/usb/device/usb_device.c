@@ -604,7 +604,9 @@ static bool reset_endpoint(const struct usb_ep_descriptor *ep_desc)
 	LOG_INF("Reset endpoint 0x%02x type %u",
 		ep_cfg.ep_addr, ep_cfg.ep_type);
 
-	usb_cancel_transfer(ep_cfg.ep_addr);
+	if (IS_ENABLED(CONFIG_USB_TRANSFER_API)) {
+		usb_cancel_transfer(ep_cfg.ep_addr);
+	}
 
 	ret = usb_dc_ep_disable(ep_cfg.ep_addr);
 	if (ret == -EALREADY) {
@@ -1214,7 +1216,9 @@ static void forward_status_cb(enum usb_dc_status_code status, const uint8_t *par
 
 	if (status == USB_DC_DISCONNECTED || status == USB_DC_SUSPEND || status == USB_DC_RESET) {
 		if (usb_dev.configured) {
-			usb_cancel_transfers();
+			if (IS_ENABLED(CONFIG_USB_TRANSFER_API)) {
+				usb_cancel_transfers();
+			}
 			if (status == USB_DC_DISCONNECTED || status == USB_DC_RESET) {
 				foreach_ep(disable_interface_ep);
 				usb_dev.configured = false;
@@ -1577,9 +1581,11 @@ int usb_enable(usb_dc_status_callback status_cb)
 		goto out;
 	}
 
-	ret = usb_transfer_init();
-	if (ret < 0) {
-		goto out;
+	if (IS_ENABLED(CONFIG_USB_TRANSFER_API)) {
+		ret = usb_transfer_init();
+		if (ret < 0) {
+			goto out;
+		}
 	}
 
 	/* Configure control EP */

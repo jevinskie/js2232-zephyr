@@ -348,6 +348,9 @@ int usb_ep_read_wait(uint8_t ep, uint8_t *data, uint32_t max_data_len,
  */
 int usb_ep_read_continue(uint8_t ep);
 
+
+#if CONFIG_USB_TRANSFER_API
+
 /**
  * Callback function signature for transfer completion.
  */
@@ -424,6 +427,8 @@ void usb_cancel_transfers(void);
  * @return true if transfer is ongoing, false otherwise.
  */
 bool usb_transfer_is_busy(uint8_t ep);
+
+#endif /** CONFIG_USB_TRANSFER_API */
 
 /**
  * @brief Start the USB remote wakeup procedure

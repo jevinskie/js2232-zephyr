@@ -890,7 +890,7 @@ int usb_dc_ep_read_wait(uint8_t ep, uint8_t *data, uint32_t max_data_len,
 
 	read_count = ep_state->read_count;
 
-	LOG_DBG("ep 0x%02x, %u bytes, %u+%u, %p", ep, max_data_len,
+	LOG_INF("ep 0x%02x, %u bytes, %u+%u, %p", ep, max_data_len,
 		ep_state->read_offset, read_count, data);
 
 	if (!USB_EP_DIR_IS_OUT(ep)) { /* check if OUT ep */

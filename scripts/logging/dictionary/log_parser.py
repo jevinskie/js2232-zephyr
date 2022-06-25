@@ -101,6 +101,31 @@ def read_log_file(args):
     return logdata
 
 
+class LogStreamer:
+    def __init__(self, args, path):
+        self.hex = args.hex
+        if self.hex:
+            self.fh = open(path, "r", encoding="iso-8859-1")
+            if not args.rawhex:
+                self._find_sentinel()
+        else:
+            self.fh = open(path, "rb")
+
+    def _find_sentinel(self):
+        buf = ""
+        while buf != LOG_HEX_SEP:
+            if len(buf) == len(LOG_HEX_SEP):
+                buf = buf[1:]
+            buf += self.fh.read(1)
+
+
+    def read(self, size):
+        if self.hex:
+            return bytes.fromhex(self.fh.read(size * 2))
+        else:
+            return self.fh.read(size)
+
+
 def main():
     """Main function of log parser"""
     args = parse_args()

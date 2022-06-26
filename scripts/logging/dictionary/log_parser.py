@@ -102,14 +102,14 @@ def read_log_file(args):
 
 
 class LogStreamer:
-    def __init__(self, args, path):
+    def __init__(self, args):
         self.hex = args.hex
         if self.hex:
-            self.fh = open(path, "r", encoding="iso-8859-1")
+            self.fh = open(args.logfile, "r", encoding="iso-8859-1")
             if not args.rawhex:
                 self._find_sentinel()
         else:
-            self.fh = open(path, "rb")
+            self.fh = open(args.logfile, "rb")
 
     def _find_sentinel(self):
         buf = ""
@@ -143,8 +143,9 @@ def main():
         logger.error("ERROR: Cannot open database file: %s, exiting...", args.dbfile)
         sys.exit(1)
 
-    logdata = read_log_file(args)
-    if logdata is None:
+    try:
+        logstream = LogStreamer(args)
+    except:
         logger.error("ERROR: cannot read log from file: %s, exiting...", args.logfile)
         sys.exit(1)
 
@@ -157,7 +158,7 @@ def main():
         else:
             logger.debug("# Endianness: Big")
 
-        ret = log_parser.parse_log_data(logdata, debug=args.debug)
+        ret = log_parser.parse_log_data(logstream, debug=args.debug)
         if not ret:
             logger.error("ERROR: there were error(s) parsing log data")
             sys.exit(1)

@@ -70,9 +70,15 @@ FMT_DROPPED_CNT = "H"
 
 
 class TimestampFilter(logging.Filter):
+    def __init__(self, name="") -> None:
+        super().__init__(name)
+        self.epoch = None
+
     def filter(self, record):
         if hasattr(record, 'timestamp'):
-            record.created = record.timestamp
+            if self.epoch is None:
+                self.epoch = time.time()
+            record.created = self.epoch + record.timestamp
         return True
 
 

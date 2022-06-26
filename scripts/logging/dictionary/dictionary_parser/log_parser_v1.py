@@ -14,13 +14,17 @@ version 1 databases.
 import colorsys
 import logging
 import math
+import re
 import struct
 import time
 
 import colorama
 from colorama import Fore
 import rich
+from rich.color import Color, ColorType
+from rich.color_triplet import ColorTriplet
 from rich.text import Text
+from rich.style import Style
 from rich.logging import RichHandler
 
 from .log_parser import LogParser
@@ -105,13 +109,31 @@ class TimestampFilter(logging.Filter):
         return True
 
 
+class RichFormatter(logging.Formatter):
+    # def __init__(self):
+        # super().__init__(self)
+        # self._method_re = re.compile('^([_a-zA-Z][_a-zA-Z0-9]):')
+    def format(self, record: logging.LogRecord):
+        if isinstance(record.msg, Text):
+            return record.msg
+        res = super().format(record)
+        mre = getattr(self, '_method_re', None)
+        if not mre:
+            self._method_re = re.compile('([_a-zA-Z][_a-zA-Z0-9]*):')
+        m = self._method_re.match(res)
+        if m:
+            name = m[1]
+            res = Text.styled(name, "bold") + Text(":" + res[m.end():])
+        return res
+
+
 def time_format(log_time):
     return Text(f'[{log_time.strftime("%H:%M:%S.%f")[:-3]}]')
 
-LOG_FORMAT = "%(message)s"
 rich_log_handler = RichHandler(log_time_format=time_format)
+rich_log_handler.setFormatter(RichFormatter())
 logging.basicConfig(
-    level="NOTSET", format=LOG_FORMAT, handlers=[rich_log_handler]
+    level="NOTSET", format="%(message)s", handlers=[rich_log_handler]
 )
 
 logger = logging.getLogger("target")
@@ -148,20 +170,18 @@ def term_color_hsv(h: float, s: float, v: float, string: str) -> Text:
     r, g, b = colorsys.hsv_to_rgb(h, s, v)
     r, g, b = int(r * 255), int(g * 255), int(b * 255)
     # return f"\x1b[38;2;{r};{g};{b}m"
-    return Text.styled(string, f"rgb({r},{g},{b})")
+    res = Text(string)
+    res.style = Style(color=Color(f"rbg_{r}_{g}_{b}", ColorType.TRUECOLOR, None, ColorTriplet(r, g, b)))
+    return res
 
 
 def byte_color(n: int) -> Text:
     if n == 0:
         # red
-        return Text.styled(
-            "00", f"logging.level.error"
-        )
+        return Text.styled("00", "red bold")
     elif n == 0xff:
-        # green
-        return Text.styled(
-            "ff", f"logging.level.info"
-        )
+        # white
+        return Text.styled("ff", "bold")
     scaled = n / 0xff
     scaled = 0.1 + (scaled * 0.4)
     return term_color_hsv(scaled, 1, 1, f"{n:02x}")
@@ -223,13 +243,14 @@ def ehexdump(s, st=0, abbreviate=True, indent=""):
                 line = indent+"%04x  *" % (i + st)
                 skip = True
         else:
-            line = indent+"%04x  %s  %s  |%s|" % (
-                  i + st,
-                  ljust(hexdump(val[:8], ' '), 23),
-                  ljust(hexdump(val[8:], ' '), 23),
-                  _extascii(val).ljust(16))
+            line = Text(f"{indent}{i + st:04x}  ") + ljust(hexdump(val[:8], ' '), 23) + \
+                    Text("  ") + ljust(hexdump(val[8:], ' '), 23) + \
+                    Text("  |" + _extascii(val).ljust(16) + "|")
             last = val
             skip = False
+        # print(type(line))
+        # print(line)
+        # rich.print(line)
         lines.append(line)
     return lines
 
@@ -597,7 +618,7 @@ class LogParserV1(LogParser):
             # self.print_hexdump(extra_data, len(log_prefix), color)
             hex_lines = ehexdump(extra_data)
             for hl in hex_lines:
-                logger.log(level, hl, extra=extra)
+                logger.log(level, hl, extra={"highlighter": None, **extra})
 
         return True
 

@@ -121,7 +121,10 @@ class LogStreamer:
 
     def read(self, size):
         if self.hex:
-            return bytes.fromhex(self.fh.read(size * 2))
+            try:
+                return bytes.fromhex(self.fh.read(size * 2))
+            except ValueError:
+                return ""
         else:
             return self.fh.read(size)
 
@@ -158,10 +161,13 @@ def main():
         else:
             logger.debug("# Endianness: Big")
 
-        ret = log_parser.parse_log_data(logstream, debug=args.debug)
-        if not ret:
-            logger.error("ERROR: there were error(s) parsing log data")
-            sys.exit(1)
+        while True:
+            log_parser.parse_log_data(logstream, debug=args.debug)
+            if args.hex:
+                logstream._find_sentinel()
+        # if not ret:
+        #     logger.error("ERROR: there were error(s) parsing log data")
+        #     sys.exit(1)
     else:
         logger.error("ERROR: Cannot find a suitable parser matching database version!")
         sys.exit(1)

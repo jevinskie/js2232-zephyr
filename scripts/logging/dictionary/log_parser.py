@@ -115,7 +115,6 @@ class LogStreamer:
     def _open(self, path, baud, is_hex):
         self.is_serial = False
         try:
-            raise serial.SerialException()
             self.fh = serial.Serial(port=path, baudrate=baud)
             self.is_serial = True
         except serial.SerialException:

@@ -11,11 +11,16 @@ This contains the implementation of the parser for
 version 1 databases.
 """
 
+import datetime
 import logging
 import math
 import struct
+import time
+
 import colorama
 from colorama import Fore
+import rich
+from rich.logging import RichHandler
 
 from .log_parser import LogParser
 
@@ -64,7 +69,26 @@ MSG_TYPE_DROPPED = 1
 FMT_DROPPED_CNT = "H"
 
 
-logger = logging.getLogger("parser")
+class TimestampFilter(logging.Filter):
+    def filter(self, record):
+        if hasattr(record, 'timestamp'):
+            record.created = record.timestamp
+        return True
+
+
+def time_format(log_time):
+    return rich.text.Text(f'[{log_time.strftime("%H:%M:%S.%f")[:-3]}]')
+
+LOG_FORMAT = "%(message)s"
+rich_log_handler = RichHandler(log_time_format=time_format)
+logging.basicConfig(
+    level="NOTSET", format=LOG_FORMAT, handlers=[rich_log_handler]
+)
+
+logger = logging.getLogger("target")
+logger.addFilter(TimestampFilter())
+
+parser_logger = logging.getLogger("parser")
 
 
 def get_log_level_str_color(lvl):
@@ -407,7 +431,7 @@ class LogParserV1(LogParser):
         string_tbl = self.extract_string_table(pkg_and_extra_buf[offset_end_of_args:pkg_len])
 
         if len(string_tbl) != num_packed_strings:
-            logger.error("------ Error extracting string table")
+            parser_logger.error("------ Error extracting string table")
             return False
 
         # Skip packaged string header
@@ -427,7 +451,7 @@ class LogParserV1(LogParser):
         fmt_str_ptr_sz = self.data_types.get_sizeof(DataTypes.PTR)
 
         if not fmt_str:
-            logger.error("------ Error getting format string at 0x%x", fmt_str_ptr)
+            parser_logger.error("------ Error getting format string at 0x%x", fmt_str_ptr)
             return None
 
         args = self.process_one_fmt_str(fmt_str, pkg_and_extra_buf[str_hdr_sz + fmt_str_ptr_sz:offset_end_of_args], string_tbl)
@@ -435,11 +459,16 @@ class LogParserV1(LogParser):
         fmt_str = formalize_fmt_string(fmt_str)
         log_msg = fmt_str % args
 
+        # if level == 0:
+        #     print(f"{log_msg}", end='')
+        # else:
+        #     log_prefix = f"[{timestamp:>10}] <{level_str}> {source_id_str}: "
+        #     print(f"{color}%s%s{Fore.RESET}" % (log_prefix, log_msg))
+        log_prefix = "prefix"
         if level == 0:
-            print(f"{log_msg}", end='')
+            logger.info(f"{log_msg}", extra={"timestamp": timestamp / 1000})
         else:
-            log_prefix = f"[{timestamp:>10}] <{level_str}> {source_id_str}: "
-            print(f"{color}%s%s{Fore.RESET}" % (log_prefix, log_msg))
+            logger.info(f"{log_msg}", extra={"timestamp": timestamp / 1000})
 
         if data_len > 0:
             # Has hexdump data
@@ -461,7 +490,7 @@ class LogParserV1(LogParser):
 
             if msg_type == MSG_TYPE_DROPPED:
                 num_dropped_sz = struct.calcsize(self.fmt_dropped_cnt)
-                num_dropped_buf = logstream.read()
+                num_dropped_buf = logstream.read(num_dropped_sz)
                 if not num_dropped_buf:
                     return False
                 num_dropped = struct.unpack(self.fmt_dropped_cnt, num_dropped_buf)[0]
@@ -473,7 +502,7 @@ class LogParserV1(LogParser):
                     return False
 
             else:
-                logger.error("------ Unknown message type: %s", msg_type)
+                parser_logger.error("------ Unknown message type: %s", msg_type)
                 return False
 
         return False

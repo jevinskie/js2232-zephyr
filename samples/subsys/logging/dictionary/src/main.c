@@ -43,6 +43,9 @@ void main(void)
 	LOG_DBG("int32_t %" PRId32 ", uint32_t %" PRIu32, i32, u32);
 	LOG_DBG("int64_t %" PRId64 ", uint64_t %" PRIu64, i64, u64);
 
+	k_msleep(10);
+	printk("Hello again after sleeping 10 ms\n");
+
 	memset(vs0, 0, sizeof(vs0));
 	snprintk(&vs0[0], sizeof(vs0), "%s", "dynamic str");
 

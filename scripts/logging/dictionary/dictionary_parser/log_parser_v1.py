@@ -69,16 +69,38 @@ MSG_TYPE_DROPPED = 1
 FMT_DROPPED_CNT = "H"
 
 
-class TimestampFilter(logging.Filter):
-    def __init__(self, name="") -> None:
-        super().__init__(name)
-        self.epoch = None
-
+class LevelFilter(logging.Filter):
     def filter(self, record):
-        if hasattr(record, 'timestamp'):
-            if self.epoch is None:
+        if record.levelno in (1, 2, 3, 4):
+            record.levelname = {
+                1: 'ERROR',
+                2: 'WARNING',
+                3: 'INFO',
+                4: 'DEBUG'
+            }[record.levelno]
+            record.levelno = {
+                1: logging.ERROR,
+                2: logging.WARNING,
+                3: logging.INFO,
+                4: logging.DEBUG
+            }[record.levelno]
+        return True
+
+
+class LocationFilter(logging.Filter):
+    def filter(self, record):
+        if hasattr(record, 'c_pathname'):
+            record.pathname = record.c_pathname
+        return True 
+
+
+class TimestampFilter(logging.Filter):
+    def filter(self, record):
+        if hasattr(record, 'c_created'):
+            if getattr(self, 'epoch', None) is None:
                 self.epoch = time.time()
-            record.created = self.epoch + record.timestamp
+            record.created = self.epoch + record.c_created
+            record.lineno = None
         return True
 
 
@@ -92,7 +114,9 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("target")
+logger.addFilter(LevelFilter())
 logger.addFilter(TimestampFilter())
+logger.addFilter(LocationFilter())
 
 parser_logger = logging.getLogger("parser")
 
@@ -472,9 +496,9 @@ class LogParserV1(LogParser):
         #     print(f"{color}%s%s{Fore.RESET}" % (log_prefix, log_msg))
         log_prefix = "prefix"
         if level == 0:
-            logger.info(f"{log_msg}", extra={"timestamp": timestamp / 1000})
+            print(f"{log_msg}", end='')
         else:
-            logger.info(f"{log_msg}", extra={"timestamp": timestamp / 1000})
+            logger.log(level, f"{log_msg}", extra={"c_created": timestamp / 1000, "c_pathname": source_id_str})
 
         if data_len > 0:
             # Has hexdump data

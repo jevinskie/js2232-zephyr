@@ -16,6 +16,8 @@ import binascii
 import logging
 import sys
 
+import serial
+
 import dictionary_parser
 from dictionary_parser.log_database import LogDatabase
 
@@ -38,6 +40,8 @@ def parse_args():
                            help="Log file only contains hexadecimal log data")
     argparser.add_argument("--debug", action="store_true",
                            help="Print extra debugging information")
+    argparser.add_argument("-b", "--baud", default=115200, type=int,
+                           help="Baudrate for serial port")
 
     return argparser.parse_args()
 
@@ -104,12 +108,22 @@ def read_log_file(args):
 class LogStreamer:
     def __init__(self, args):
         self.hex = args.hex
-        if self.hex:
-            self.fh = open(args.logfile, "r", encoding="iso-8859-1")
-            if not args.rawhex:
-                self._find_sentinel()
-        else:
-            self.fh = open(args.logfile, "rb")
+        self._open(args.logfile, args.baud, args.hex)
+        if self.hex and not args.rawhex:
+            self._find_sentinel()
+
+    def _open(self, path, baud, is_hex):
+        self.is_serial = False
+        try:
+            raise serial.SerialException()
+            self.fh = serial.Serial(port=path, baudrate=baud)
+            self.is_serial = True
+        except serial.SerialException:
+            if is_hex:
+                self.fh = open(path, "r", encoding="iso-8859-1")
+            else:
+                self.fh = open(path, "rb")
+
 
     def _find_sentinel(self):
         buf = ""
@@ -120,13 +134,18 @@ class LogStreamer:
 
 
     def read(self, size):
+        sz = size * 2 if self.hex else size
+        if self.is_serial:
+            buf = self.fh.read(size=sz)
+        else:
+            buf = self.fh.read(sz)
         if self.hex:
             try:
-                return bytes.fromhex(self.fh.read(size * 2))
+                return bytes.fromhex(buf)
             except ValueError:
-                return ""
+                return b""
         else:
-            return self.fh.read(size)
+            return buf
 
 
 def main():
@@ -161,10 +180,13 @@ def main():
         else:
             logger.debug("# Endianness: Big")
 
-        while True:
-            log_parser.parse_log_data(logstream, debug=args.debug)
-            if args.hex:
-                logstream._find_sentinel()
+        try:
+            while True:
+                log_parser.parse_log_data(logstream, debug=args.debug)
+                if args.hex:
+                    logstream._find_sentinel()
+        except KeyboardInterrupt:
+            pass
         # if not ret:
         #     logger.error("ERROR: there were error(s) parsing log data")
         #     sys.exit(1)

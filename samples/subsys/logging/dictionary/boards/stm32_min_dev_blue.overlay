@@ -1,0 +1,14 @@
+/ {
+	chosen {
+		zephyr,console = &usart1;
+	};
+};
+
+&dma1 {
+	status = "okay";
+};
+
+&usart1 {
+	pinctrl-0 = <&usart1_tx_remap1_pb6 &usart1_rx_remap1_pb7>;
+	current-speed = <3000000>;
+};

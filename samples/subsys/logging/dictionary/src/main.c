@@ -62,6 +62,12 @@ void main(void)
 
 	LOG_HEXDUMP_DBG(hexdump_msg, strlen(hexdump_msg), "For HeXdUmP!");
 
+	uint8_t bytes[128];
+	for (int i = 0; i < sizeof(bytes); ++i) {
+		bytes[i] = i;
+	}
+	// LOG_HEXDUMP_DBG(bytes, sizeof(bytes), "For rainbow hexdump");
+
 #ifdef CONFIG_FPU
 	float f = 66.67;
 	double d = 68.69;

@@ -11,7 +11,7 @@ This contains the implementation of the parser for
 version 1 databases.
 """
 
-import datetime
+import colorsys
 import logging
 import math
 import struct
@@ -20,6 +20,7 @@ import time
 import colorama
 from colorama import Fore
 import rich
+from rich.text import Text
 from rich.logging import RichHandler
 
 from .log_parser import LogParser
@@ -105,7 +106,7 @@ class TimestampFilter(logging.Filter):
 
 
 def time_format(log_time):
-    return rich.text.Text(f'[{log_time.strftime("%H:%M:%S.%f")[:-3]}]')
+    return Text(f'[{log_time.strftime("%H:%M:%S.%f")[:-3]}]')
 
 LOG_FORMAT = "%(message)s"
 rich_log_handler = RichHandler(log_time_format=time_format)
@@ -141,6 +142,96 @@ def formalize_fmt_string(fmt_str):
     new_str = new_str.replace("%p", "0x%x")
 
     return new_str
+
+
+def term_color_hsv(h: float, s: float, v: float, string: str) -> Text:
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    r, g, b = int(r * 255), int(g * 255), int(b * 255)
+    # return f"\x1b[38;2;{r};{g};{b}m"
+    return Text.styled(string, f"rgb({r},{g},{b})")
+
+
+def byte_color(n: int) -> Text:
+    if n == 0:
+        # red
+        return Text.styled(
+            "00", f"logging.level.error"
+        )
+    elif n == 0xff:
+        # green
+        return Text.styled(
+            "ff", f"logging.level.info"
+        )
+    scaled = n / 0xff
+    scaled = 0.1 + (scaled * 0.4)
+    return term_color_hsv(scaled, 1, 1, f"{n:02x}")
+
+
+# https://github.com/AsahiLinux/m1n1/blob/main/proxyclient/m1n1/utils.py
+# SPDX-License-Identifier: MIT
+_extascii_table_low = [
+    "▪", "☺", "☻", "♥", "♦", "♣", "♠", "•",
+    "◘", "○", "◙", "♂", "♀", "♪", "♫", "☼",
+    "►", "◄", "↕", "‼", "¶", "§", "▬", "↨",
+    "↑", "↓", "→", "←", "∟", "↔", "▲", "▼"]
+
+_extascii_table_high = [
+    "⌂",
+    "█", "⡀", "⢀", "⣀", "⠠", "⡠", "⢠", "⣠",
+    "⠄", "⡄", "⢄", "⣄", "⠤", "⡤", "⢤", "⣤",
+    "⠁", "⡁", "⢁", "⣁", "⠡", "⡡", "⢡", "⣡",
+    "⠅", "⡅", "⢅", "⣅", "⠥", "⡥", "⢥", "⣥",
+    "⠃", "⡃", "⢃", "⣃", "⠣", "⡣", "⢣", "⣣",
+    "⠇", "⡇", "⢇", "⣇", "⠧", "⡧", "⢧", "⣧",
+    "⠉", "⡉", "⢉", "⣉", "⠩", "⡩", "⢩", "⣩",
+    "⠍", "⡍", "⢍", "⣍", "⠭", "⡭", "⢭", "⣭",
+    "⠊", "⡊", "⢊", "⣊", "⠪", "⡪", "⢪", "⣪",
+    "⠎", "⡎", "⢎", "⣎", "⠮", "⡮", "⢮", "⣮",
+    "⠑", "⡑", "⢑", "⣑", "⠱", "⡱", "⢱", "⣱",
+    "⠕", "⡕", "⢕", "⣕", "⠵", "⡵", "⢵", "⣵",
+    "⠚", "⡚", "⢚", "⣚", "⠺", "⡺", "⢺", "⣺",
+    "⠞", "⡞", "⢞", "⣞", "⠾", "⡾", "⢾", "⣾",
+    "⠛", "⡛", "⢛", "⣛", "⠻", "⡻", "⢻", "⣻",
+    "⠟", "⡟", "⢟", "⣟", "⠿", "⡿", "⢿", "⣿"]
+
+def _extascii(s):
+    s2 = ""
+    for c in s:
+        if c < 0x20:
+            s2 += _extascii_table_low[c]
+        elif c > 0x7e:
+            s2 += _extascii_table_high[c-0x7f]
+        else:
+            s2 += chr(c)
+    return s2
+
+def hexdump(s, sep=" "):
+    return Text(sep).join([byte_color(x) for x in s])
+
+def ljust(s, n):
+    return s + Text(" " * max(0, n - len(s)))
+
+def ehexdump(s, st=0, abbreviate=True, indent=""):
+    last = None
+    skip = False
+    lines = []
+    for i in range(0,len(s),16):
+        line = ""
+        val = s[i:i+16]
+        if val == last and abbreviate:
+            if not skip:
+                line = indent+"%04x  *" % (i + st)
+                skip = True
+        else:
+            line = indent+"%04x  %s  %s  |%s|" % (
+                  i + st,
+                  ljust(hexdump(val[:8], ' '), 23),
+                  ljust(hexdump(val[8:], ' '), 23),
+                  _extascii(val).ljust(16))
+            last = val
+            skip = False
+        lines.append(line)
+    return lines
 
 
 class DataTypes():
@@ -495,14 +586,18 @@ class LogParserV1(LogParser):
         #     log_prefix = f"[{timestamp:>10}] <{level_str}> {source_id_str}: "
         #     print(f"{color}%s%s{Fore.RESET}" % (log_prefix, log_msg))
         log_prefix = "prefix"
+        extra = {"c_created": timestamp / 1_000, "c_pathname": source_id_str}
         if level == 0:
             print(f"{log_msg}", end='')
         else:
-            logger.log(level, f"{log_msg}", extra={"c_created": timestamp / 1000, "c_pathname": source_id_str})
+            logger.log(level, f"{log_msg}", extra=extra)
 
         if data_len > 0:
             # Has hexdump data
-            self.print_hexdump(extra_data, len(log_prefix), color)
+            # self.print_hexdump(extra_data, len(log_prefix), color)
+            hex_lines = ehexdump(extra_data)
+            for hl in hex_lines:
+                logger.log(level, hl, extra=extra)
 
         return True
 

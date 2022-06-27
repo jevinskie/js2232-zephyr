@@ -20,3 +20,8 @@ class LogParser(abc.ABC):
     def parse_log_data(self, logdata, debug=False):
         """Parse log data"""
         return None
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_log_handlers(self):
+        return []

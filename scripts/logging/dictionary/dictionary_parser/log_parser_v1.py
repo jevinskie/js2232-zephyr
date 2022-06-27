@@ -20,7 +20,6 @@ import time
 
 import colorama
 from colorama import Fore
-import rich
 from rich.color import Color, ColorType
 from rich.color_triplet import ColorTriplet
 from rich.text import Text
@@ -73,29 +72,20 @@ MSG_TYPE_DROPPED = 1
 # Number of dropped messages
 FMT_DROPPED_CNT = "H"
 
-
-class LevelFilter(logging.Filter):
-    def filter(self, record):
-        if record.levelno in (1, 2, 3, 4):
-            record.levelname = {
-                1: 'ERROR',
-                2: 'WARNING',
-                3: 'INFO',
-                4: 'DEBUG'
-            }[record.levelno]
-            record.levelno = {
-                1: logging.ERROR,
-                2: logging.WARNING,
-                3: logging.INFO,
-                4: logging.DEBUG
-            }[record.levelno]
-        return True
+WIRE_LEVEL_TO_LOG_LEVEL = {
+    0: logging.NOTSET,
+    1: logging.ERROR,
+    2: logging.WARNING,
+    3: logging.INFO,
+    4: logging.DEBUG
+}
 
 
 class LocationFilter(logging.Filter):
     def filter(self, record):
         if hasattr(record, 'c_pathname'):
             record.pathname = record.c_pathname
+            record.lineno = None
         return True 
 
 
@@ -105,14 +95,10 @@ class TimestampFilter(logging.Filter):
             if getattr(self, 'epoch', None) is None:
                 self.epoch = time.time()
             record.created = self.epoch + record.c_created
-            record.lineno = None
         return True
 
 
 class RichFormatter(logging.Formatter):
-    # def __init__(self):
-        # super().__init__(self)
-        # self._method_re = re.compile('^([_a-zA-Z][_a-zA-Z0-9]):')
     def format(self, record: logging.LogRecord):
         if isinstance(record.msg, Text):
             return record.msg
@@ -130,19 +116,12 @@ class RichFormatter(logging.Formatter):
 def time_format(log_time):
     return Text(f'[{log_time.strftime("%H:%M:%S.%f")[:-3]}]')
 
-rich_log_handler = RichHandler(log_time_format=time_format)
-rich_log_handler.setFormatter(RichFormatter())
-logging.basicConfig(
-    level="NOTSET", format="%(message)s", handlers=[rich_log_handler]
-)
+tgt_logger = logging.getLogger("target")
+tgt_logger.addFilter(TimestampFilter())
+tgt_logger.addFilter(LocationFilter())
 
-logger = logging.getLogger("target")
-logger.addFilter(LevelFilter())
-logger.addFilter(TimestampFilter())
-logger.addFilter(LocationFilter())
-
-parser_logger = logging.getLogger("parser")
-
+logger = logging.getLogger("parser")
+# logger = 
 
 def get_log_level_str_color(lvl):
     """Convert numeric log level to string"""
@@ -543,7 +522,7 @@ class LogParserV1(LogParser):
         pkg_len = (log_desc >> 6) & int(math.pow(2, 10) - 1)
         data_len = (log_desc >> 16) & int(math.pow(2, 12) - 1)
 
-        level_str, color = get_log_level_str_color(level)
+        log_level = WIRE_LEVEL_TO_LOG_LEVEL[level]
         source_id_str = self.database.get_log_source_string(domain_id, source_id)
 
         total_len = pkg_len + data_len
@@ -573,7 +552,7 @@ class LogParserV1(LogParser):
         string_tbl = self.extract_string_table(pkg_and_extra_buf[offset_end_of_args:pkg_len])
 
         if len(string_tbl) != num_packed_strings:
-            parser_logger.error("------ Error extracting string table")
+            logger.error("------ Error extracting string table")
             return False
 
         # Skip packaged string header
@@ -593,7 +572,7 @@ class LogParserV1(LogParser):
         fmt_str_ptr_sz = self.data_types.get_sizeof(DataTypes.PTR)
 
         if not fmt_str:
-            parser_logger.error("------ Error getting format string at 0x%x", fmt_str_ptr)
+            logger.error("------ Error getting format string at 0x%x", fmt_str_ptr)
             return None
 
         args = self.process_one_fmt_str(fmt_str, pkg_and_extra_buf[str_hdr_sz + fmt_str_ptr_sz:offset_end_of_args], string_tbl)
@@ -611,14 +590,14 @@ class LogParserV1(LogParser):
         if level == 0:
             print(f"{log_msg}", end='')
         else:
-            logger.log(level, f"{log_msg}", extra=extra)
+            tgt_logger.log(log_level, f"{log_msg}", extra=extra)
 
         if data_len > 0:
             # Has hexdump data
             # self.print_hexdump(extra_data, len(log_prefix), color)
             hex_lines = ehexdump(extra_data)
             for hl in hex_lines:
-                logger.log(level, hl, extra={"highlighter": None, **extra})
+                tgt_logger.log(log_level, hl, extra={"highlighter": None, **extra})
 
         return True
 
@@ -648,9 +627,15 @@ class LogParserV1(LogParser):
                     return False
 
             else:
-                parser_logger.error("------ Unknown message type: %s", msg_type)
+                logger.error("------ Unknown message type: %s", msg_type)
                 return False
 
         return False
+
+    @staticmethod
+    def get_log_handlers():
+        rich_log_handler = RichHandler(log_time_format=time_format)
+        rich_log_handler.setFormatter(RichFormatter())
+        return [rich_log_handler]
 
 colorama.init()

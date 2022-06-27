@@ -21,8 +21,7 @@ import serial
 import dictionary_parser
 from dictionary_parser.log_database import LogDatabase
 
-
-LOGGER_FORMAT = "%(message)s"
+tgt_logger = logging.getLogger("target")
 logger = logging.getLogger("parser")
 
 LOG_HEX_SEP = "##ZLOGV1##"
@@ -152,11 +151,13 @@ def main():
     args = parse_args()
 
     # Setup logging for parser
-    logging.basicConfig(format=LOGGER_FORMAT)
+    logging.basicConfig(level="NOTSET", format="%(message)s", handlers=dictionary_parser.get_log_handlers())
     if args.debug:
         logger.setLevel(logging.DEBUG)
+        tgt_logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
+        tgt_logger.setLevel(logging.INFO)
 
     # Read from database file
     database = LogDatabase.read_json_database(args.dbfile)

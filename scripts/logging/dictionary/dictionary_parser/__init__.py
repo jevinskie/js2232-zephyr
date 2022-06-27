@@ -20,3 +20,6 @@ def get_parser(database):
         return LogParserV1(database)
 
     return None
+
+def get_log_handlers():
+    return LogParserV1.get_log_handlers()

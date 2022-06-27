@@ -656,14 +656,14 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 	struct usb_dc_stm32_ep_state *ep_state = usb_dc_stm32_get_ep_state(ep);
 	const bool dbl = USB_DC_EP_TYPE_IS_UNIDIRECTIONAL(ep_cfg->ep_type);
 	if (dbl) {
-		LOG_INF("trying to double buffer 0x%02x", ep);
+		LOG_DBG("trying to double buffer 0x%02x", ep);
 	}
 
 	if (!ep_state) {
 		return -EINVAL;
 	}
 
-	LOG_INF("ep 0x%02x, previous ep_mps %u, ep_mps %u, ep_type %u raw: 0x%02x",
+	LOG_DBG("ep 0x%02x, previous ep_mps %u, ep_mps %u, ep_type %u raw: 0x%02x",
 		ep_cfg->ep_addr, ep_state->ep_mps, ep_cfg->ep_mps,
 		USB_DC_EP_TYPE(ep_cfg->ep_type), ep_cfg->ep_type);
 
@@ -678,7 +678,7 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const ep_cfg)
 			usb_dc_stm32_state.pma_offset += ep_cfg->ep_mps;
 			pma_off |= usb_dc_stm32_state.pma_offset << 16;
 		}
-		LOG_INF("ep: 0x%02x pma_off: 0x%08x", ep_cfg->ep_addr, pma_off);
+		LOG_DBG("ep: 0x%02x pma_off: 0x%08x", ep_cfg->ep_addr, pma_off);
 		HAL_PCDEx_PMAConfig(&usb_dc_stm32_state.pcd, ep,
 				    dbl ? PCD_DBL_BUF : PCD_SNG_BUF, pma_off);
 		ep_state->ep_pma_buf_len = ep_cfg->ep_mps;
@@ -890,7 +890,7 @@ int usb_dc_ep_read_wait(uint8_t ep, uint8_t *data, uint32_t max_data_len,
 
 	read_count = ep_state->read_count;
 
-	LOG_INF("ep 0x%02x, %u bytes, %u+%u, %p", ep, max_data_len,
+	LOG_DBG("ep 0x%02x, %u bytes, %u+%u, %p", ep, max_data_len,
 		ep_state->read_offset, read_count, data);
 
 	if (!USB_EP_DIR_IS_OUT(ep)) { /* check if OUT ep */
